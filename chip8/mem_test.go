@@ -1,6 +1,9 @@
 package chip8
 
-import "testing"
+import (
+	"math/rand"
+	"testing"
+)
 
 func TestMemory_Get(t *testing.T) {
 	tests := map[string]struct {
@@ -104,4 +107,43 @@ func TestMemory_Set(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetPrettyMemoryState(t *testing.T) {
+	tests := map[string]struct {
+		memoryPokes map[uint16]uint8
+		wantErr     bool
+	}{
+		"default": {
+			wantErr: false,
+		},
+	}
+
+	for name, test := range tests {
+		mem := NewMemory()
+
+		for i := range mem.Memory {
+			mem.Memory[i] = uint8(rand.Intn(0xFF))
+		}
+
+		t.Run(name, func(t *testing.T) {
+			for addr, val := range test.memoryPokes {
+				mem.Memory[addr] = val
+			}
+
+			output := mem.GetPrettyMemoryState()
+			t.Log(output)
+		})
+	}
+}
+
+func BenchmarkGetPrettyMemoryState(b *testing.B) {
+	mem := NewMemory()
+
+	for i := range mem.Memory {
+		mem.Memory[i] = uint8(rand.Intn(0xFF))
+	}
+
+	b.ResetTimer()
+	mem.GetPrettyMemoryState()
 }
