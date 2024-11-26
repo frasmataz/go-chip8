@@ -49,5 +49,14 @@ func (mem *Memory) Set(addr uint16, val uint8) error {
 }
 
 func NewMemory() *Memory {
-	return new(Memory)
+	mem := new(Memory)
+
+	// Load default char sprites into 'interpreter area' (0x000 - 0x1FF) of memory
+	for ci, char := range CharSprites {
+		for bi, _byte := range char {
+			mem.Set(uint16(ci*5+bi), _byte)
+		}
+	}
+
+	return mem
 }

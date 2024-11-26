@@ -14,7 +14,7 @@ func TestMemory_Get(t *testing.T) {
 	}{
 		"default": {
 			getAddr: 0x000,
-			want:    0x00,
+			want:    0xF0,
 			wantErr: false,
 		},
 		"modified byte": {
@@ -121,10 +121,6 @@ func TestGetPrettyMemoryState(t *testing.T) {
 
 	for name, test := range tests {
 		mem := NewMemory()
-
-		for i := range mem.Memory {
-			mem.Memory[i] = uint8(rand.Intn(0xFF))
-		}
 
 		t.Run(name, func(t *testing.T) {
 			for addr, val := range test.memoryPokes {
