@@ -9,6 +9,56 @@ type Memory struct {
 	Memory [0xFFF + 1]uint8
 }
 
+func NewMemory() *Memory {
+	mem := new(Memory)
+
+	// Load default char sprites into 'interpreter area' (0x000 - 0x1FF) of memory
+	for ci, char := range CharSprites {
+		for bi, _byte := range char {
+			mem.Set8(uint16(ci*5+bi), _byte)
+		}
+	}
+
+	return mem
+}
+
+func (mem *Memory) Get8(addr uint16) (uint8, error) {
+	if addr > uint16(len(mem.Memory)-1) {
+		return 0x0, fmt.Errorf("memory address out of bounds: %v, capacity %v", addr, len(mem.Memory))
+	}
+
+	return mem.Memory[addr], nil
+}
+
+func (mem *Memory) Get16(addr uint16) (uint16, error) {
+	if addr > uint16(len(mem.Memory)-2) {
+		return 0x0, fmt.Errorf("memory address out of bounds: %v, capacity %v", addr, len(mem.Memory))
+	}
+
+	return uint16(mem.Memory[addr])<<8 | uint16(mem.Memory[addr+1]), nil
+}
+
+func (mem *Memory) Set8(addr uint16, val uint8) error {
+	if addr > uint16(len(mem.Memory)-1) {
+		return fmt.Errorf("memory address out of bounds: %v, capacity %v", addr, len(mem.Memory))
+	}
+
+	mem.Memory[addr] = val
+
+	return nil
+}
+
+func (mem *Memory) Set16(addr uint16, val uint16) error {
+	if addr > uint16(len(mem.Memory)-2) {
+		return fmt.Errorf("memory address out of bounds: %v, capacity %v", addr, len(mem.Memory))
+	}
+
+	mem.Memory[addr] = uint8(val & 0xFF00 >> 8)
+	mem.Memory[addr+1] = uint8(val & 0x00FF)
+
+	return nil
+}
+
 func (mem *Memory) GetPrettyMemoryState() string {
 	const columns = 16
 
@@ -28,35 +78,4 @@ func (mem *Memory) GetPrettyMemoryState() string {
 	}
 
 	return sb.String()
-}
-
-func (mem *Memory) Get(addr uint16) (uint8, error) {
-	if addr > uint16(len(mem.Memory)-1) {
-		return 0x0, fmt.Errorf("memory address out of bounds: %v, capacity %v", addr, len(mem.Memory))
-	}
-
-	return mem.Memory[addr], nil
-}
-
-func (mem *Memory) Set(addr uint16, val uint8) error {
-	if addr > uint16(len(mem.Memory)-1) {
-		return fmt.Errorf("memory address out of bounds: %v, capacity %v", addr, len(mem.Memory))
-	}
-
-	mem.Memory[addr] = val
-
-	return nil
-}
-
-func NewMemory() *Memory {
-	mem := new(Memory)
-
-	// Load default char sprites into 'interpreter area' (0x000 - 0x1FF) of memory
-	for ci, char := range CharSprites {
-		for bi, _byte := range char {
-			mem.Set(uint16(ci*5+bi), _byte)
-		}
-	}
-
-	return mem
 }
