@@ -88,8 +88,8 @@ func (cpu *Cpu) RET() error {
 		return fmt.Errorf("stack underflow on RET - SP is 0x00 - cpu state: %v", cpu.GetPrettyCpuState())
 	}
 
-	cpu.PC = uint16(cpu.Stack[cpu.SP-1])
 	cpu.SP--
+	cpu.PC = uint16(cpu.Stack[cpu.SP])
 
 	return nil
 }
