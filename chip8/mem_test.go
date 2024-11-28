@@ -86,7 +86,7 @@ func TestMemory_Get16(t *testing.T) {
 				return
 			}
 			if got != test.want {
-				t.Errorf("Memory.Get() = 0x%02x, want 0x%02x", got, test.want)
+				t.Errorf("Memory.Get() = 0x%02X, want 0x%02X", got, test.want)
 			}
 		})
 	}

@@ -73,10 +73,10 @@ func (mem *Memory) GetPrettyMemoryState() string {
 
 	for addr, val := range mem.Memory {
 		if addr%columns == 0 {
-			sb.WriteString(fmt.Sprintf("\n%03x: ", addr))
+			sb.WriteString(fmt.Sprintf("\n%03X: ", addr))
 		}
 
-		sb.WriteString(fmt.Sprintf("%02x ", val))
+		sb.WriteString(fmt.Sprintf("%02X ", val))
 	}
 
 	return sb.String()

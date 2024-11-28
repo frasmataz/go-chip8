@@ -80,11 +80,11 @@ func TestRET(t *testing.T) {
 		cpu.Tick()
 
 		if cpu.PC != pcWant {
-			t.Errorf("RET failed: expected PC %04x, got %04x", pcWant, cpu.PC)
+			t.Errorf("RET failed: expected PC %04X, got %04X", pcWant, cpu.PC)
 		}
 
 		if cpu.SP != spWant {
-			t.Errorf("RET failed: expected SP %02x, got %02x", spWant, cpu.SP)
+			t.Errorf("RET failed: expected SP %02X, got %02X", spWant, cpu.SP)
 		}
 	})
 
@@ -103,11 +103,11 @@ func TestRET(t *testing.T) {
 		cpu.Tick()
 
 		if cpu.PC != pcWant {
-			t.Errorf("RET failed: expected PC %04x, got %04x", pcWant, cpu.PC)
+			t.Errorf("RET failed: expected PC %04X, got %04X", pcWant, cpu.PC)
 		}
 
 		if cpu.SP != spWant {
-			t.Errorf("RET failed: expected SP %02x, got %02x", spWant, cpu.SP)
+			t.Errorf("RET failed: expected SP %02X, got %02X", spWant, cpu.SP)
 		}
 	})
 
@@ -121,7 +121,7 @@ func TestRET(t *testing.T) {
 
 		err := cpu.Tick()
 		if err == nil {
-			t.Errorf("RET failed: expected overflow error: sp = %04x", cpu.SP)
+			t.Errorf("RET failed: expected overflow error: sp = %04X", cpu.SP)
 		}
 	})
 
@@ -135,7 +135,7 @@ func TestRET(t *testing.T) {
 
 		err := cpu.Tick()
 		if err == nil {
-			t.Errorf("RET failed: expected underflow error: sp = %04x", cpu.SP)
+			t.Errorf("RET failed: expected underflow error: sp = %04X", cpu.SP)
 		}
 	})
 }
@@ -156,7 +156,7 @@ func TestJP(t *testing.T) {
 		}
 
 		if cpu.PC != _test.pcWant {
-			t.Errorf("JP failed: expected PC %04x, got %04x", _test.pcWant, cpu.PC)
+			t.Errorf("JP failed: expected PC %04X, got %04X", _test.pcWant, cpu.PC)
 		}
 	}
 
@@ -173,7 +173,7 @@ func TestJP(t *testing.T) {
 		}
 
 		for _, _test := range tests {
-			t.Run(fmt.Sprintf("JP %04x", _test.opcode), func(t *testing.T) {
+			t.Run(fmt.Sprintf("JP %04X", _test.opcode), func(t *testing.T) {
 				doTest(_test)
 			})
 		}
@@ -234,7 +234,7 @@ func TestCALL(t *testing.T) {
 			wantCpuState.Memory.Set16(pc, opcode)
 			wantCpuState.Stack[sp] = pc + 2
 
-			t.Run(fmt.Sprintf("CALL %04x", opcode), func(t *testing.T) {
+			t.Run(fmt.Sprintf("CALL %04X", opcode), func(t *testing.T) {
 				doTest(t, test{
 					inputCpuState: inputCpuState,
 					wantCpuState:  wantCpuState,
