@@ -5,8 +5,10 @@ import (
 	"strings"
 )
 
+const MemorySize = 0x1000
+
 type Memory struct {
-	Memory [0xFFF + 1]uint8
+	Memory [MemorySize]uint8
 }
 
 func NewMemory() *Memory {

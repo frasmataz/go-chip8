@@ -6,15 +6,16 @@ import (
 )
 
 const debugLog = true
+const StackSize = 0x10
 
 type Cpu struct {
-	V     [0x10]uint8  // General-purpose 8-bit registers V0 - VF
-	I     uint16       // 16-bit register, used to hold memory addresses
-	PC    uint16       // Program counter - 16-bit
-	SP    uint8        // Stack pointer - 8-bit
-	DT    uint8        // Delay timer - 8-bit - dec at 60Hz when non-zero
-	ST    uint8        // Sound timer - 8-bit - dec at 60Hz when non-zero
-	Stack [0x10]uint16 // Stack - 16 16-bit values
+	V     [0x10]uint8       // General-purpose 8-bit registers V0 - VF
+	I     uint16            // 16-bit register, used to hold memory addresses
+	PC    uint16            // Program counter - 16-bit
+	SP    uint8             // Stack pointer - 8-bit
+	DT    uint8             // Delay timer - 8-bit - dec at 60Hz when non-zero
+	ST    uint8             // Sound timer - 8-bit - dec at 60Hz when non-zero
+	Stack [StackSize]uint16 // Stack - 16 16-bit values
 
 	Memory  *Memory
 	Display *Display
@@ -81,7 +82,7 @@ func (cpu *Cpu) RET() error {
 		fmt.Printf("RET\n")
 	}
 
-	if cpu.SP > 0x10 {
+	if cpu.SP > StackSize {
 		return fmt.Errorf("stack overflow on RET - SP is > 0x10 - cpu state: %v", cpu.GetPrettyCpuState())
 	} else if cpu.SP == 0x00 {
 		return fmt.Errorf("stack underflow on RET - SP is 0x00 - cpu state: %v", cpu.GetPrettyCpuState())
@@ -115,7 +116,7 @@ func (cpu *Cpu) CALL(opcode uint16) error {
 		fmt.Printf("CALL %04x\n", target)
 	}
 
-	if cpu.SP > 0x0F {
+	if cpu.SP > StackSize-1 {
 		return fmt.Errorf("stack overflow on CALL - SP is > 0x0F - cpu state: %v", cpu.GetPrettyCpuState())
 	}
 

@@ -5,7 +5,40 @@ import (
 	"math/rand"
 	"reflect"
 	"testing"
+
+	"github.com/sergi/go-diff/diffmatchpatch"
+	"github.com/tiendc/go-deepcopy"
 )
+
+func getRandomCpuState() *Cpu {
+	cpu := NewCpu()
+
+	cpu.I = uint16(rand.Intn(0x10000))
+	cpu.PC = uint16(rand.Intn(MemorySize - 1)) // Last even memory address
+	cpu.SP = uint8(rand.Intn(StackSize))
+	cpu.DT = uint8(rand.Intn(StackSize))
+	cpu.ST = uint8(rand.Intn(StackSize))
+
+	for i := range 0x10 {
+		cpu.V[i] = uint8(rand.Intn(0x100))
+	}
+
+	for i := range StackSize {
+		cpu.Stack[i] = uint16(rand.Intn(MemorySize - 1)) // Last even memory address
+	}
+
+	for i := range MemorySize {
+		cpu.Memory.Set8(uint16(i), uint8(rand.Intn(0x100))) // This also randomizes 'interpreter space', containing default sprites
+	}
+
+	for y := range height {
+		for x := range width {
+			cpu.Display.Set(uint(x), uint(y), rand.Intn(2) == 1)
+		}
+	}
+
+	return cpu
+}
 
 func TestGetPrettyCpuState(t *testing.T) {
 	t.Log(NewCpu().GetPrettyCpuState())
@@ -172,7 +205,10 @@ func TestCALL(t *testing.T) {
 
 		cpu.Tick()
 		if !reflect.DeepEqual(cpu, test.wantCpuState) {
-			t.Errorf("CALL failed: expected CPU state: %v\n\ngot state: %v", test.wantCpuState.GetPrettyCpuState(), cpu.GetPrettyCpuState())
+			dmp := diffmatchpatch.New()
+			diffs := dmp.DiffMain(test.wantCpuState.GetPrettyCpuState(), cpu.GetPrettyCpuState(), true)
+			fmt.Println(dmp.DiffPrettyText(dmp.DiffCleanupSemantic(diffs)))
+			t.Errorf("CALL failed: %v", dmp)
 		}
 	}
 
@@ -208,44 +244,58 @@ func TestCALL(t *testing.T) {
 	})
 
 	t.Run("minimum valid", func(t *testing.T) {
-		inputCpuState := &Cpu{
-			PC:     0x200,
-			SP:     0x00,
-			Memory: NewMemory(),
-		}
-		inputCpuState.Memory.Set16(0x200, 0x2000)
+		const n_tests = 20
 
-		wantCpuState := &Cpu{
-			PC:     0x000,
-			SP:     0x01,
-			Memory: inputCpuState.Memory,
-		}
-		wantCpuState.Stack[0x0] = 0x202
+		for i := 0; i < n_tests; i++ {
+			inputCpuState := getRandomCpuState()
 
-		doTest(t, test{
-			inputCpuState: inputCpuState,
-			wantCpuState:  wantCpuState,
-		})
+			const opcode = 0x2000
+
+			inputCpuState.PC = 0x200
+			inputCpuState.SP = 0x00
+			inputCpuState.Memory.Set16(0x200, opcode)
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			wantCpuState.PC = opcode & 0xFFF
+			wantCpuState.SP = inputCpuState.SP + 1
+			wantCpuState.Stack[inputCpuState.SP] = inputCpuState.PC + 2
+
+			t.Run(fmt.Sprintf("CALL %04X", opcode), func(t *testing.T) {
+				doTest(t, test{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+				})
+			})
+		}
 	})
 
 	t.Run("maximum valid", func(t *testing.T) {
-		inputCpuState := &Cpu{
-			PC:     0x200,
-			SP:     0x00,
-			Memory: NewMemory(),
-		}
-		inputCpuState.Memory.Set16(0x200, 0x2FFE)
+		const n_tests = 20
 
-		wantCpuState := &Cpu{
-			PC:     0xFFE,
-			SP:     0x01,
-			Memory: inputCpuState.Memory,
-		}
-		wantCpuState.Stack[0x0] = 0x202
+		for i := 0; i < n_tests; i++ {
+			inputCpuState := getRandomCpuState()
 
-		doTest(t, test{
-			inputCpuState: inputCpuState,
-			wantCpuState:  wantCpuState,
-		})
+			const opcode = 0x2FFE
+
+			inputCpuState.PC = 0x200
+			inputCpuState.SP = 0x0F
+			inputCpuState.Memory.Set16(0x200, opcode)
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			wantCpuState.PC = opcode & 0xFFF
+			wantCpuState.SP = inputCpuState.SP + 1
+			wantCpuState.Stack[inputCpuState.SP] = inputCpuState.PC + 2
+
+			t.Run(fmt.Sprintf("CALL %04X", opcode), func(t *testing.T) {
+				doTest(t, test{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+				})
+			})
+		}
 	})
 }
