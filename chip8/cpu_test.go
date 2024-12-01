@@ -387,6 +387,36 @@ func TestCALL(t *testing.T) {
 	})
 
 	t.Run("maximum valid", func(t *testing.T) {
+		const n_tests = 20
+
+		for i := 0; i < n_tests; i++ {
+			inputCpuState := getRandomCpuState()
+
+			const opcode = 0x2FFE
+
+			inputCpuState.PC = 0x200
+			inputCpuState.SP = 0x0F
+			inputCpuState.Memory.Set16(0x200, opcode)
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			wantCpuState.PC = opcode & 0xFFF
+			wantCpuState.SP = inputCpuState.SP + 1
+			wantCpuState.Stack[inputCpuState.SP] = inputCpuState.PC + 2
+
+			t.Run(fmt.Sprintf("CALL %04X", opcode), func(t *testing.T) {
+				err := opcodeTest{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+					wantError:     false,
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
+			})
+		}
 	})
 
 	t.Run("stack overflow", func(t *testing.T) {
@@ -408,6 +438,104 @@ func TestCALL(t *testing.T) {
 					inputCpuState: inputCpuState,
 					wantCpuState:  wantCpuState,
 					wantError:     true,
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
+			})
+		}
+	})
+}
+
+func TestSE_v_byte(t *testing.T) {
+	t.Run("random state", func(t *testing.T) {
+		const n_tests = 200
+
+		for i := 0; i < n_tests; i++ {
+			r := uint16(rand.Intn(0x10))
+			kk := uint8(rand.Intn(0x100))
+
+			opcode := (0x3000 | r<<8 | uint16(kk))
+
+			inputCpuState := getRandomCpuState()
+
+			inputCpuState.Memory.Set16(inputCpuState.PC, opcode)
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			if inputCpuState.V[r] == kk {
+				wantCpuState.PC = inputCpuState.PC + 4
+			} else {
+				wantCpuState.PC = inputCpuState.PC + 2
+			}
+
+			t.Run(fmt.Sprintf("SE_v_byte %04X", opcode), func(t *testing.T) {
+				err := opcodeTest{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+					wantError:     false,
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
+			})
+		}
+	})
+
+	t.Run("minimum valid", func(t *testing.T) {
+		const n_tests = 20
+
+		for i := 0; i < n_tests; i++ {
+			opcode := uint16(0x3000)
+
+			inputCpuState := getRandomCpuState()
+			inputCpuState.V[0x0] = 0x00
+
+			inputCpuState.Memory.Set16(inputCpuState.PC, opcode)
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			wantCpuState.PC = inputCpuState.PC + 4
+
+			t.Run(fmt.Sprintf("SE_v_byte %04X", opcode), func(t *testing.T) {
+				err := opcodeTest{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+					wantError:     false,
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
+			})
+		}
+	})
+
+	t.Run("minimum valid", func(t *testing.T) {
+		const n_tests = 20
+
+		for i := 0; i < n_tests; i++ {
+			opcode := uint16(0x3FFF)
+
+			inputCpuState := getRandomCpuState()
+			inputCpuState.V[0xF] = 0xFF
+
+			inputCpuState.Memory.Set16(inputCpuState.PC, opcode)
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			wantCpuState.PC = inputCpuState.PC + 4
+
+			t.Run(fmt.Sprintf("SE_v_byte %04X", opcode), func(t *testing.T) {
+				err := opcodeTest{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+					wantError:     false,
 				}.doOpcodeTest()
 
 				if err != nil {
