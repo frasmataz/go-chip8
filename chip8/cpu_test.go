@@ -40,6 +40,28 @@ func getRandomCpuState() *Cpu {
 	return cpu
 }
 
+type opcodeTest struct {
+	inputCpuState *Cpu
+	wantCpuState  *Cpu
+}
+
+func (test opcodeTest) doOpcodeTest() error {
+	cpu := test.inputCpuState
+
+	err := cpu.Tick()
+	if err != nil {
+		return err
+	}
+
+	if !reflect.DeepEqual(cpu, test.wantCpuState) {
+		dmp := diffmatchpatch.New()
+		diffs := dmp.DiffMain(test.wantCpuState.GetPrettyCpuState(), cpu.GetPrettyCpuState(), true)
+		return fmt.Errorf("opcode test failed: %v", dmp.DiffPrettyText(dmp.DiffCleanupSemantic(diffs)))
+	}
+
+	return nil
+}
+
 func TestGetPrettyCpuState(t *testing.T) {
 	t.Log(NewCpu().GetPrettyCpuState())
 }
@@ -138,107 +160,214 @@ func TestRET(t *testing.T) {
 			t.Errorf("RET failed: expected underflow error: sp = %04X", cpu.SP)
 		}
 	})
-}
-
-func TestJP(t *testing.T) {
-	type test struct {
-		opcode uint16
-		pcWant uint16
-	}
-
-	doTest := func(_test test) {
-		cpu := NewCpu()
-
-		cpu.Memory.Set16(0x200, _test.opcode)
-		err := cpu.Tick()
-		if err != nil {
-			t.Errorf("JP failed: %v", err)
-		}
-
-		if cpu.PC != _test.pcWant {
-			t.Errorf("JP failed: expected PC %04X, got %04X", _test.pcWant, cpu.PC)
-		}
-	}
 
 	t.Run("random valid", func(t *testing.T) {
-		const n = 20
-		tests := [n]test{}
+		const n_tests = 200
 
-		for i := 0; i < n; i++ {
-			addr := uint16(rand.Intn(0x1000))
-			tests[i] = test{
-				opcode: addr | 0x1000,
-				pcWant: addr,
-			}
-		}
+		for i := 0; i < n_tests; i++ {
+			inputCpuState := getRandomCpuState()
 
-		for _, _test := range tests {
-			t.Run(fmt.Sprintf("JP %04X", _test.opcode), func(t *testing.T) {
-				doTest(_test)
+			const opcode = 0x00EE
+
+			inputCpuState.Memory.Set16(inputCpuState.PC, opcode)
+			inputCpuState.SP = uint8(rand.Intn(0x0F) + 1)
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			wantCpuState.PC = inputCpuState.Stack[inputCpuState.SP-1]
+			wantCpuState.SP = inputCpuState.SP - 1
+
+			t.Run(fmt.Sprintf("JP %04X", opcode), func(t *testing.T) {
+				err := opcodeTest{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+				}.doOpcodeTest()
+
+				if err != nil && inputCpuState.SP > 0x0 && inputCpuState.SP <= 0x10 {
+					t.Error(err.Error())
+				}
 			})
 		}
 	})
 
 	t.Run("minimum valid", func(t *testing.T) {
-		doTest(test{
-			opcode: 0x1000,
-			pcWant: 0x0000,
-		})
+		const n_tests = 20
+
+		for i := 0; i < n_tests; i++ {
+			inputCpuState := getRandomCpuState()
+
+			const opcode = 0x00EE
+
+			inputCpuState.SP = uint8(0x1)
+			inputCpuState.Stack[0x0] = 0x0000
+			inputCpuState.Memory.Set16(inputCpuState.PC, opcode)
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			wantCpuState.PC = 0x0000
+			wantCpuState.SP = inputCpuState.SP - 1
+
+			t.Run(fmt.Sprintf("JP %04X", opcode), func(t *testing.T) {
+				err := opcodeTest{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
+			})
+		}
 	})
 
 	t.Run("maximum valid", func(t *testing.T) {
-		doTest(test{
-			opcode: 0x1FFE,
-			pcWant: 0x0FFE,
-		})
+		const n_tests = 20
+
+		for i := 0; i < n_tests; i++ {
+			inputCpuState := getRandomCpuState()
+
+			const opcode = 0x00EE
+
+			inputCpuState.SP = uint8(0x10)
+			inputCpuState.Stack[0xF] = 0x0FFF
+			inputCpuState.Memory.Set16(inputCpuState.PC, opcode)
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			wantCpuState.PC = 0xFFF
+			wantCpuState.SP = inputCpuState.SP - 1
+
+			t.Run(fmt.Sprintf("JP %04X", opcode), func(t *testing.T) {
+				err := opcodeTest{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
+			})
+		}
+	})
+}
+
+func TestJP(t *testing.T) {
+	t.Run("random valid", func(t *testing.T) {
+		const n_tests = 20
+
+		for i := 0; i < n_tests; i++ {
+			inputCpuState := getRandomCpuState()
+
+			opcode := uint16(rand.Intn(0x1000)) | 0x1000
+
+			inputCpuState.Memory.Set16(inputCpuState.PC, opcode)
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			wantCpuState.PC = opcode & 0xFFF
+
+			t.Run(fmt.Sprintf("JP %04X", opcode), func(t *testing.T) {
+				err := opcodeTest{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
+			})
+		}
+	})
+
+	t.Run("minimum valid", func(t *testing.T) {
+		const n_tests = 20
+
+		for i := 0; i < n_tests; i++ {
+			inputCpuState := getRandomCpuState()
+
+			const opcode = 0x1000
+
+			inputCpuState.Memory.Set16(inputCpuState.PC, opcode)
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			wantCpuState.PC = 0x0000
+
+			t.Run(fmt.Sprintf("JP %04X", opcode), func(t *testing.T) {
+				err := opcodeTest{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
+			})
+		}
+	})
+
+	t.Run("maximum valid", func(t *testing.T) {
+		const n_tests = 20
+
+		for i := 0; i < n_tests; i++ {
+			inputCpuState := getRandomCpuState()
+
+			const opcode = 0x1FFE
+
+			inputCpuState.Memory.Set16(inputCpuState.PC, opcode)
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			wantCpuState.PC = 0x0FFE
+
+			t.Run(fmt.Sprintf("JP %04X", opcode), func(t *testing.T) {
+				err := opcodeTest{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
+			})
+		}
 	})
 }
 
 func TestCALL(t *testing.T) {
-	type test struct {
-		inputCpuState *Cpu
-		wantCpuState  *Cpu
-	}
-
-	doTest := func(t *testing.T, test test) {
-		cpu := test.inputCpuState
-
-		cpu.Tick()
-		if !reflect.DeepEqual(cpu, test.wantCpuState) {
-			dmp := diffmatchpatch.New()
-			diffs := dmp.DiffMain(test.wantCpuState.GetPrettyCpuState(), cpu.GetPrettyCpuState(), true)
-			fmt.Println(dmp.DiffPrettyText(dmp.DiffCleanupSemantic(diffs)))
-			t.Errorf("CALL failed: %v", dmp)
-		}
-	}
 
 	t.Run("random valid", func(t *testing.T) {
-		for i := 0; i < 20; i++ {
-			addr := uint16(rand.Intn(0x1000))
-			sp := uint8(rand.Intn(0x0F))
-			pc := uint16(rand.Intn(0x1000-0x200) + 0x200)
-			opcode := addr | 0x2000
+		const n_tests = 100
 
-			inputCpuState := &Cpu{
-				PC:     pc,
-				SP:     sp,
-				Memory: NewMemory(),
-			}
-			inputCpuState.Memory.Set16(pc, opcode)
+		for i := 0; i < n_tests; i++ {
+			opcode := uint16(rand.Intn(0x1000)) | 0x2000
 
-			wantCpuState := &Cpu{
-				PC:     addr,
-				SP:     sp + 1,
-				Memory: NewMemory(),
-			}
-			wantCpuState.Memory.Set16(pc, opcode)
-			wantCpuState.Stack[sp] = pc + 2
+			inputCpuState := getRandomCpuState()
+
+			inputCpuState.Memory.Set16(inputCpuState.PC, opcode)
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			wantCpuState.PC = opcode & 0xFFF
+			wantCpuState.SP = inputCpuState.SP + 1
+			wantCpuState.Stack[inputCpuState.SP] = inputCpuState.PC + 2
 
 			t.Run(fmt.Sprintf("CALL %04X", opcode), func(t *testing.T) {
-				doTest(t, test{
+				err := opcodeTest{
 					inputCpuState: inputCpuState,
 					wantCpuState:  wantCpuState,
-				})
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
 			})
 		}
 	})
@@ -263,10 +392,14 @@ func TestCALL(t *testing.T) {
 			wantCpuState.Stack[inputCpuState.SP] = inputCpuState.PC + 2
 
 			t.Run(fmt.Sprintf("CALL %04X", opcode), func(t *testing.T) {
-				doTest(t, test{
+				err := opcodeTest{
 					inputCpuState: inputCpuState,
 					wantCpuState:  wantCpuState,
-				})
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
 			})
 		}
 	})
@@ -291,10 +424,14 @@ func TestCALL(t *testing.T) {
 			wantCpuState.Stack[inputCpuState.SP] = inputCpuState.PC + 2
 
 			t.Run(fmt.Sprintf("CALL %04X", opcode), func(t *testing.T) {
-				doTest(t, test{
+				err := opcodeTest{
 					inputCpuState: inputCpuState,
 					wantCpuState:  wantCpuState,
-				})
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
 			})
 		}
 	})
