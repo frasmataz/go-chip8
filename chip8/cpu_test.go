@@ -286,6 +286,32 @@ func TestJP(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("out of range", func(t *testing.T) {
+		const n_tests = 20
+
+		for i := 0; i < n_tests; i++ {
+			inputCpuState := getRandomCpuState()
+
+			const opcode = 0x1FFF
+
+			inputCpuState.Memory.Set16(inputCpuState.PC, opcode)
+
+			wantCpuState := new(Cpu)
+
+			t.Run(fmt.Sprintf("JP %04X", opcode), func(t *testing.T) {
+				err := opcodeTest{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+					wantError:     true,
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
+			})
+		}
+	})
 }
 
 func TestCALL(t *testing.T) {
@@ -361,6 +387,9 @@ func TestCALL(t *testing.T) {
 	})
 
 	t.Run("maximum valid", func(t *testing.T) {
+	})
+
+	t.Run("stack overflow", func(t *testing.T) {
 		const n_tests = 20
 
 		for i := 0; i < n_tests; i++ {
@@ -369,21 +398,16 @@ func TestCALL(t *testing.T) {
 			const opcode = 0x2FFE
 
 			inputCpuState.PC = 0x200
-			inputCpuState.SP = 0x0F
+			inputCpuState.SP = 0x10
 			inputCpuState.Memory.Set16(0x200, opcode)
 
 			wantCpuState := new(Cpu)
-			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
-
-			wantCpuState.PC = opcode & 0xFFF
-			wantCpuState.SP = inputCpuState.SP + 1
-			wantCpuState.Stack[inputCpuState.SP] = inputCpuState.PC + 2
 
 			t.Run(fmt.Sprintf("CALL %04X", opcode), func(t *testing.T) {
 				err := opcodeTest{
 					inputCpuState: inputCpuState,
 					wantCpuState:  wantCpuState,
-					wantError:     false,
+					wantError:     true,
 				}.doOpcodeTest()
 
 				if err != nil {
