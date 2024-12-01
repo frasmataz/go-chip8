@@ -195,25 +195,31 @@ func TestRET(t *testing.T) {
 
 func TestJP(t *testing.T) {
 	t.Run("random state", func(t *testing.T) {
-		const n_tests = 20
+		const n_tests = 200
 
 		for i := 0; i < n_tests; i++ {
 			inputCpuState := getRandomCpuState()
 
-			opcode := uint16(rand.Intn(0x1000)) | 0x1000
-
+			target := uint16(rand.Intn(0x1000))
+			opcode := target | 0x1000
 			inputCpuState.Memory.Set16(inputCpuState.PC, opcode)
 
 			wantCpuState := new(Cpu)
-			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+			wantError := false
 
-			wantCpuState.PC = opcode & 0xFFF
+			if target <= 0xFFE {
+				_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+				wantCpuState.PC = opcode & 0xFFF
+			} else {
+				wantError = true
+			}
 
 			t.Run(fmt.Sprintf("JP %04X", opcode), func(t *testing.T) {
 				err := opcodeTest{
 					inputCpuState: inputCpuState,
 					wantCpuState:  wantCpuState,
-					wantError:     false,
+					wantError:     wantError,
 				}.doOpcodeTest()
 
 				if err != nil {
