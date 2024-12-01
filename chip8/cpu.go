@@ -75,9 +75,7 @@ func (cpu *Cpu) RET() error {
 		fmt.Printf("RET\n")
 	}
 
-	if cpu.SP > StackSize {
-		return fmt.Errorf("stack overflow on RET - SP is > 0x10 - cpu state: %v", cpu.GetPrettyCpuState())
-	} else if cpu.SP == 0x00 {
+	if cpu.SP == 0x00 {
 		return fmt.Errorf("stack underflow on RET - SP is 0x00 - cpu state: %v", cpu.GetPrettyCpuState())
 	}
 
