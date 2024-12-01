@@ -59,6 +59,8 @@ func decodeAndExecute(opcode uint16, cpu *Cpu) error {
 		return cpu.CALL(opcode)
 	} else if opcode&0xF000 == 0x3000 {
 		return cpu.SE_v_byte(opcode)
+	} else if opcode&0xF000 == 0x4000 {
+		return cpu.SNE_v_byte(opcode)
 	}
 	return nil
 }
@@ -121,6 +123,13 @@ func (cpu *Cpu) CALL(opcode uint16) error {
 
 func (cpu *Cpu) SE_v_byte(opcode uint16) error {
 	if cpu.V[(opcode&0x0F00)>>8] == uint8(opcode&0x00FF) {
+		cpu.PC += 2
+	}
+	return nil
+}
+
+func (cpu *Cpu) SNE_v_byte(opcode uint16) error {
+	if cpu.V[(opcode&0x0F00)>>8] != uint8(opcode&0x00FF) {
 		cpu.PC += 2
 	}
 	return nil
