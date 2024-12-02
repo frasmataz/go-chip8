@@ -16,8 +16,8 @@ func getRandomCpuState() *Cpu {
 	cpu.I = uint16(rand.Intn(0x10000))
 	cpu.PC = uint16(rand.Intn(MemorySize - 1)) // Last even memory address
 	cpu.SP = uint8(rand.Intn(StackSize))
-	cpu.DT = uint8(rand.Intn(StackSize))
-	cpu.ST = uint8(rand.Intn(StackSize))
+	cpu.DT = uint8(rand.Intn(0x100))
+	cpu.ST = uint8(rand.Intn(0x100))
 
 	for i := range 0x10 {
 		cpu.V[i] = uint8(rand.Intn(0x100))
