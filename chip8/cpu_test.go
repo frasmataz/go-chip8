@@ -1313,3 +1313,110 @@ func TestXOR_v1_v2(t *testing.T) {
 		}
 	})
 }
+
+func TestADD_v1_v2(t *testing.T) {
+	t.Run("random state", func(t *testing.T) {
+		const n_tests = 200
+
+		for i := 0; i < n_tests; i++ {
+			r1 := uint16(rand.Intn(0x10))
+			r2 := uint16(rand.Intn(0x10))
+
+			opcode := (0x8004 | r1<<8 | r2<<4)
+
+			inputCpuState := getRandomCpuState()
+
+			inputCpuState.Memory.Set16(inputCpuState.PC, opcode)
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			sum := uint16(inputCpuState.V[r1]) + uint16(inputCpuState.V[r2])
+			carry := uint8(0x00)
+
+			if sum > 0xFF {
+				carry = 0x01
+			}
+
+			wantCpuState.V[r1] = uint8(sum)
+			wantCpuState.V[0xF] = carry
+			wantCpuState.PC = inputCpuState.PC + 2
+
+			t.Run(fmt.Sprintf("ADD_v1_v2 %04X", opcode), func(t *testing.T) {
+				err := opcodeTest{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+					wantError:     false,
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
+			})
+		}
+	})
+
+	t.Run("minimum valid", func(t *testing.T) {
+		const n_tests = 20
+
+		for i := 0; i < n_tests; i++ {
+			opcode := uint16(0x8004)
+
+			inputCpuState := getRandomCpuState()
+
+			inputCpuState.Memory.Set16(inputCpuState.PC, opcode)
+			inputCpuState.V[0x0] = 0x00
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			wantCpuState.V[0x0] = 0x00
+			wantCpuState.V[0xF] = 0x00
+
+			wantCpuState.PC = inputCpuState.PC + 2
+
+			t.Run(fmt.Sprintf("AND_v1_v2 %04X", opcode), func(t *testing.T) {
+				err := opcodeTest{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+					wantError:     false,
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
+			})
+		}
+	})
+
+	t.Run("maximum valid", func(t *testing.T) {
+		const n_tests = 20
+
+		for i := 0; i < n_tests; i++ {
+			opcode := uint16(0x8FF4)
+
+			inputCpuState := getRandomCpuState()
+
+			inputCpuState.Memory.Set16(inputCpuState.PC, opcode)
+			inputCpuState.V[0xF] = 0xFF
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			wantCpuState.V[0xF] = 0x01
+			wantCpuState.PC = inputCpuState.PC + 2
+
+			t.Run(fmt.Sprintf("AND_v1_v2 %04X", opcode), func(t *testing.T) {
+				err := opcodeTest{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+					wantError:     false,
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
+			})
+		}
+	})
+}

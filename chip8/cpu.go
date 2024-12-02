@@ -45,14 +45,10 @@ func (cpu *Cpu) Tick() error {
 }
 
 func decodeAndExecute(opcode uint16, cpu *Cpu) error {
-	if opcode&0xF000 == 0x0000 {
-		if opcode == 0x00E0 {
-			return cpu.CLS()
-		} else if opcode == 0x00EE {
-			return cpu.RET()
-		} else {
-			return fmt.Errorf("SYS not implemented")
-		}
+	if opcode&0xF0FF == 0x00E0 {
+		return cpu.CLS()
+	} else if opcode&0xF0FF == 0x00EE {
+		return cpu.RET()
 	} else if opcode&0xF000 == 0x1000 {
 		return cpu.JP(opcode)
 	} else if opcode&0xF000 == 0x2000 {
@@ -75,6 +71,8 @@ func decodeAndExecute(opcode uint16, cpu *Cpu) error {
 		return cpu.AND_v1_v2(opcode)
 	} else if opcode&0xF00F == 0x8003 {
 		return cpu.XOR_v1_v2(opcode)
+	} else if opcode&0xF00F == 0x8004 {
+		return cpu.ADD_v1_v2(opcode)
 	}
 	return nil
 }
@@ -183,6 +181,21 @@ func (cpu *Cpu) AND_v1_v2(opcode uint16) error {
 
 func (cpu *Cpu) XOR_v1_v2(opcode uint16) error {
 	cpu.V[(opcode&0x0F00)>>8] = cpu.V[(opcode&0x0F00)>>8] ^ cpu.V[(opcode&0x00F0)>>4]
+	return nil
+}
+
+func (cpu *Cpu) ADD_v1_v2(opcode uint16) error {
+	r1 := (opcode & 0x0F00) >> 8
+	r2 := (opcode & 0x00F0) >> 4
+	sum := uint16(cpu.V[r1]) + uint16(cpu.V[r2])
+	carry := uint8(0x00)
+	if sum > 0xFF {
+		carry = 0x01
+	}
+
+	cpu.V[r1] = uint8(sum)
+	cpu.V[0xF] = carry
+
 	return nil
 }
 
