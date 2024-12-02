@@ -73,6 +73,8 @@ func decodeAndExecute(opcode uint16, cpu *Cpu) error {
 		return cpu.OR_v1_v2(opcode)
 	} else if opcode&0xF00F == 0x8002 {
 		return cpu.AND_v1_v2(opcode)
+	} else if opcode&0xF00F == 0x8003 {
+		return cpu.XOR_v1_v2(opcode)
 	}
 	return nil
 }
@@ -176,6 +178,11 @@ func (cpu *Cpu) OR_v1_v2(opcode uint16) error {
 
 func (cpu *Cpu) AND_v1_v2(opcode uint16) error {
 	cpu.V[(opcode&0x0F00)>>8] = cpu.V[(opcode&0x0F00)>>8] & cpu.V[(opcode&0x00F0)>>4]
+	return nil
+}
+
+func (cpu *Cpu) XOR_v1_v2(opcode uint16) error {
+	cpu.V[(opcode&0x0F00)>>8] = cpu.V[(opcode&0x0F00)>>8] ^ cpu.V[(opcode&0x00F0)>>4]
 	return nil
 }
 
