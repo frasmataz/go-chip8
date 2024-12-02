@@ -515,7 +515,7 @@ func TestSE_v_byte(t *testing.T) {
 		}
 	})
 
-	t.Run("minimum valid", func(t *testing.T) {
+	t.Run("maximum valid", func(t *testing.T) {
 		const n_tests = 20
 
 		for i := 0; i < n_tests; i++ {
@@ -613,7 +613,7 @@ func TestSNE_v_byte(t *testing.T) {
 		}
 	})
 
-	t.Run("minimum valid", func(t *testing.T) {
+	t.Run("maximum valid", func(t *testing.T) {
 		const n_tests = 20
 
 		for i := 0; i < n_tests; i++ {
@@ -711,7 +711,7 @@ func TestSE_v1_v2(t *testing.T) {
 		}
 	})
 
-	t.Run("minimum valid", func(t *testing.T) {
+	t.Run("maximum valid", func(t *testing.T) {
 		const n_tests = 20
 
 		for i := 0; i < n_tests; i++ {
@@ -806,7 +806,7 @@ func TestLD_v_byte(t *testing.T) {
 		}
 	})
 
-	t.Run("minimum valid", func(t *testing.T) {
+	t.Run("maximum valid", func(t *testing.T) {
 		const n_tests = 20
 
 		for i := 0; i < n_tests; i++ {
@@ -820,6 +820,103 @@ func TestLD_v_byte(t *testing.T) {
 			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
 
 			wantCpuState.V[0xF] = 0xFF
+			wantCpuState.PC = inputCpuState.PC + 2
+
+			t.Run(fmt.Sprintf("LD_v_byte %04X", opcode), func(t *testing.T) {
+				err := opcodeTest{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+					wantError:     false,
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
+			})
+		}
+	})
+}
+
+func TestADD_v_byte(t *testing.T) {
+	t.Run("random state", func(t *testing.T) {
+		const n_tests = 200
+
+		for i := 0; i < n_tests; i++ {
+			r := uint16(rand.Intn(0x10))
+			kk := uint8(rand.Intn(0x100))
+
+			opcode := (0x7000 | r<<8 | uint16(kk))
+
+			inputCpuState := getRandomCpuState()
+
+			inputCpuState.Memory.Set16(inputCpuState.PC, opcode)
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			wantCpuState.V[r] = inputCpuState.V[r] + kk
+			wantCpuState.PC = inputCpuState.PC + 2
+
+			t.Run(fmt.Sprintf("LD_v_byte %04X", opcode), func(t *testing.T) {
+				err := opcodeTest{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+					wantError:     false,
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
+			})
+		}
+	})
+
+	t.Run("minimum valid", func(t *testing.T) {
+		const n_tests = 20
+
+		for i := 0; i < n_tests; i++ {
+			opcode := uint16(0x7010)
+
+			inputCpuState := getRandomCpuState()
+
+			inputCpuState.Memory.Set16(inputCpuState.PC, opcode)
+			inputCpuState.V[0x0] = 0x00
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			wantCpuState.V[0x0] = 0x10
+			wantCpuState.PC = inputCpuState.PC + 2
+
+			t.Run(fmt.Sprintf("LD_v_byte %04X", opcode), func(t *testing.T) {
+				err := opcodeTest{
+					inputCpuState: inputCpuState,
+					wantCpuState:  wantCpuState,
+					wantError:     false,
+				}.doOpcodeTest()
+
+				if err != nil {
+					t.Error(err.Error())
+				}
+			})
+		}
+	})
+
+	t.Run("maximum valid", func(t *testing.T) {
+		const n_tests = 20
+
+		for i := 0; i < n_tests; i++ {
+			opcode := uint16(0x7F10)
+
+			inputCpuState := getRandomCpuState()
+
+			inputCpuState.Memory.Set16(inputCpuState.PC, opcode)
+			inputCpuState.V[0xF] = 0xFF
+
+			wantCpuState := new(Cpu)
+			_ = deepcopy.Copy(&wantCpuState, &inputCpuState)
+
+			wantCpuState.V[0xF] = 0x0F
 			wantCpuState.PC = inputCpuState.PC + 2
 
 			t.Run(fmt.Sprintf("LD_v_byte %04X", opcode), func(t *testing.T) {
